@@ -3,10 +3,10 @@ name: Check for Headers in Source Code
 
 on:
   push:
-    - 'renovate/**'
-    branches-ignore: main
+    branches: ['renovate/**']
+    branches-ignore: [main]
   pull_request:
-    branches: main
+    branches: [main]
 
 jobs:
   build:
