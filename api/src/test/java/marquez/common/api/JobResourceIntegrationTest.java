@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.common.api;
 
@@ -235,6 +238,19 @@ public class JobResourceIntegrationTest extends BaseIntegrationTest {
         .isNotNull()
         .extracting(Run::getId)
         .isEqualTo(runId);
+  }
+
+  @Test
+  public void testApp_deleteJob() {
+    client.createJob(NAMESPACE_NAME, JOB_NAME, JOB_META);
+
+    List<Job> jobs = client.listJobs(NAMESPACE_NAME);
+    assertThat(jobs).hasSizeGreaterThan(0);
+
+    client.deleteJob(NAMESPACE_NAME, JOB_NAME);
+
+    jobs = client.listJobs(NAMESPACE_NAME);
+    assertThat(jobs).isEmpty();
   }
 
   @Test

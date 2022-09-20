@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.service;
 
@@ -49,7 +52,7 @@ public class JobService extends DelegatingDaos.DelegatingJobDao {
     if (jobMeta.getRunId().isPresent()) {
       UUID runUuid = jobMeta.getRunId().get().getValue();
       runDao.notifyJobChange(runUuid, jobRow, jobMeta);
-      ExtendedRunRow runRow = runDao.findRunByUuidAsRow(runUuid).get();
+      ExtendedRunRow runRow = runDao.findRunByUuidAsExtendedRow(runUuid).get();
 
       List<ExtendedDatasetVersionRow> inputs =
           datasetVersionDao.findInputDatasetVersionsFor(runUuid);

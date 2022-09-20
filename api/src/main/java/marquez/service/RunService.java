@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.service;
 
@@ -24,6 +27,7 @@ import marquez.common.models.NamespaceName;
 import marquez.common.models.RunId;
 import marquez.common.models.RunState;
 import marquez.db.BaseDao;
+import marquez.db.JobDao;
 import marquez.db.JobVersionDao;
 import marquez.db.JobVersionDao.BagOfJobVersionInfo;
 import marquez.db.RunStateDao;
@@ -45,6 +49,7 @@ public class RunService extends DelegatingDaos.DelegatingRunDao {
   private final JobVersionDao jobVersionDao;
   private final RunStateDao runStateDao;
   private final Collection<RunTransitionListener> runTransitionListeners;
+  private final JobDao jobDao;
 
   public RunService(
       @NonNull BaseDao baseDao, Collection<RunTransitionListener> runTransitionListeners) {
@@ -52,6 +57,7 @@ public class RunService extends DelegatingDaos.DelegatingRunDao {
     this.jobVersionDao = baseDao.createJobVersionDao();
     this.runStateDao = baseDao.createRunStateDao();
     this.runTransitionListeners = runTransitionListeners;
+    this.jobDao = baseDao.createJobDao();
   }
 
   /**
@@ -74,14 +80,15 @@ public class RunService extends DelegatingDaos.DelegatingRunDao {
     if (transitionedAt == null) {
       transitionedAt = Instant.now();
     }
-    ExtendedRunRow runRow = findRunByUuidAsRow(runId.getValue()).get();
+    ExtendedRunRow runRow = findRunByUuidAsExtendedRow(runId.getValue()).get();
     runStateDao.updateRunStateFor(runId.getValue(), runState, transitionedAt);
 
     if (runState.isDone()) {
       BagOfJobVersionInfo bagOfJobVersionInfo =
           jobVersionDao.upsertJobVersionOnRunTransition(
-              runRow.getNamespaceName(),
-              runRow.getJobName(),
+              jobDao
+                  .findJobByNameAsRow(runRow.getNamespaceName(), runRow.getJobName())
+                  .orElseThrow(),
               runRow.getUuid(),
               runState,
               transitionedAt);

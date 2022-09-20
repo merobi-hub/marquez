@@ -3,7 +3,7 @@
 openapi: 3.0.2
 info:
   title: Marquez
-  version: 0.23.0-SNAPSHOT
+  version: 0.27.0-SNAPSHOT
   description: Marquez is an open source **metadata service** for the **collection**, **aggregation**,
     and **visualization** of a data ecosystem's metadata.
   license:
@@ -69,6 +69,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NamespaceList'
+
+  /events/lineage:
+    get:
+      operationId: getLineageEvents
+      parameters:
+        - $ref: '#/components/parameters/sortDirection'
+        - $ref: '#/components/parameters/before'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/limit'
+      summary: List all received OpenLineage events.
+      description: Returns a list of OpenLineage events, sorted in direction of passed sort parameter. By default it is desc.
+      tags:
+        - Events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineageEventList'
 
   /sources/{source}:
     parameters:
@@ -155,6 +175,19 @@ paths:
       operationId: getDataset
       summary: Retrieve a dataset
       description: Returns a dataset.
+      tags:
+        - Datasets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+    delete:
+      operationId: deleteDataset
+      summary: Soft deletes dataset.
+      description: Soft deletes dataset. It will be un-deleted if new OpenLineage event containing this dataset comes.
       tags:
         - Datasets
       responses:
@@ -301,6 +334,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Job'
+    delete:
+      operationId: deleteJob
+      summary: Soft deletes job.
+      description: Soft deletes job. It will be un-deleted if new OpenLineage event containing this job comes.
+      tags:
+        - Datasets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
 
   /namespaces/{namespace}/jobs:
     parameters:
@@ -697,7 +743,9 @@ components:
       schema:
         type: string
         example: dataset:food_delivery:public.delivery_7_days
-      description: The ID of the node.
+      description: The ID of the node. A node can either be a dataset node or a job node. The format of
+        nodeId for dataset is `dataset:<namespace_of_dataset>:<name_of_the_dataset>` and for job is
+        `job:<namespace_of_the_job>:<name_of_the_job>`.
       required: true
 
     depth:
@@ -737,6 +785,35 @@ components:
         example: name
         description: Sorts the results of your query by `name` or `updated_at`.
       required: false
+
+    sortDirection:
+      name: sortDirection
+      in: query
+      schema:
+        type: string
+        example: name
+        description: Sorts the results of your query by indicated direction `asc` or `desc`.
+      required: false
+
+    before:
+      name: version
+      in: query
+      description: Returns events before passed date.
+      required: false
+      schema:
+        type: string
+        format: uuid
+        example: 2022-09-15T07:47:19Z
+
+    after:
+      name: after
+      in: query
+      description: Returns events after passed date.
+      required: false
+      schema:
+        type: string
+        format: uuid
+        example: 2022-09-15T07:47:19Z
 
   schemas:
     CreatedNamespace:
@@ -788,6 +865,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Namespace'
+
+    LineageEventList:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineageEvent'
 
     CreatedSource:
       type: object
@@ -850,7 +935,7 @@ components:
             $ref: '#/components/schemas/Source'
 
     DatasetType:
-      type: enum
+      type: string
       enum: [DB_TABLE, STREAM]
       description: The type of dataset
 
@@ -1029,19 +1114,26 @@ components:
                 type: string
               tags:
                 description: List of tags.
-                type: string
+                type: array
+                items: 
+                  type: string
               description:
                 description: The description of the field.
                 type: string
         tags:
           description: List of tags.
-          type: string
+          type: array
+          items:
+            type: string
         lastModifiedAt:
           description: An [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp representing the date/time the dataset was last modified by a successful run.
           type: string
           format: date-time
+        lastLifecycleState:
+          description: The last lifecycle state of the dataset.
+          type: string
         description:
-          description:  The description of the dataset.
+          description: The description of the dataset.
           type: string
         facets:
           $ref: '#/components/schemas/DatasetFacets'
@@ -1049,6 +1141,9 @@ components:
           description: The current version of the dataset.
           type: string
           format: uuid
+        deleted:
+          description: The deleted state of the dataset.
+          type: boolean
       example:
         id:
           namespace: my-namespace
@@ -1246,7 +1341,7 @@ components:
             $ref: '#/components/schemas/Tag'
 
     JobType:
-      type: enum
+      type: string
       enum: [BATCH, STREAM, SERVICE]
       description: The type of the job.
 
@@ -1569,6 +1664,10 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DatasetVersionId'
+            context:
+              description: A key/value pair that must be of type `string`. A context can be used for getting additional details about the job.
+              type: object
+              deprecated: true
             facets:
               $ref: '#/components/schemas/RunFacets'
       example:
@@ -1582,6 +1681,7 @@ components:
         endedAt: 2019-05-09T20:05:46.815920Z
         durationMs: 4250894125
         args: {'email': 'me@example.com', 'emailOnFailure': 'false', 'emailOnRetry': 'true', 'retries': '1'}
+        context: {'SQL': "SELECT * FROM mytable;"}
         facets: {}
 
     RunList:
@@ -1675,7 +1775,7 @@ components:
             $ref: '#/components/schemas/GraphEdge'
 
     NodeType:
-      type: enum
+      type: string
       enum: [ JOB, DATASET ]
       description: The type of the diff node.
 
@@ -1753,11 +1853,13 @@ components:
           example: food_delivery
         nodeId:
           type: string
-          description: The ID of the dataset or job node.
-          example: dataset:food_delivery:public.delivery_7_days
+          description: The ID of the node. A node can either be a dataset node or a job node. The format of
+            nodeId for dataset is `dataset:<namespace_of_dataset>:<name_of_the_dataset>` and for job is
+            `job:<namespace_of_the_job>:<name_of_the_job>`.
+          example: 'dataset:food_delivery:public.delivery_7_days'
 
     SearchResultType:
-      type: enum
+      type: string
       enum: [DATASET, JOB]
       description: The type of search result.
       example: DATASET

@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db;
 
@@ -122,6 +125,9 @@ public final class Columns {
   public static final String TRANSITIONED_AT = "transitioned_at";
   public static final String RUN_UUID = "run_uuid";
   public static final String STATE = "state";
+
+  /* LINEAGE EVENT ROW COLUMNS */
+  public static final String EVENT = "event";
 
   public static UUID uuidOrNull(final ResultSet results, final String column) throws SQLException {
     if (results.getObject(column) == null) {

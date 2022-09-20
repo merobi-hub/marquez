@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.graphql;
 
@@ -45,7 +48,7 @@ public class GraphqlTest {
     ExecutionResult result =
         graphQL.execute(
             "{"
-                + "  job(namespace: \"my-scheduler-namespace\", name: \"myjob.mytask\") {"
+                + "  job(namespace: \"my-scheduler-namespace\", name: \"myjob\") {"
                 + "     name"
                 + "  }"
                 + "}");
@@ -54,6 +57,6 @@ public class GraphqlTest {
     Map<String, Object> map = result.getData();
     Map<String, Object> job = (Map<String, Object>) map.get("job");
 
-    Assertions.assertEquals("myjob.mytask", job.get("name"));
+    Assertions.assertEquals("myjob", job.get("name"));
   }
 }

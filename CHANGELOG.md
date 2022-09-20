@@ -1,26 +1,110 @@
 # Changelog
 
-## [Unreleased](https://github.com/MarquezProject/marquez/compare/0.22.0...HEAD)
+## [Unreleased](https://github.com/MarquezProject/marquez/compare/0.26.0...HEAD)
+## [0.26.0](https://github.com/MarquezProject/marquez/compare/0.25.0...0.26.0) - 2022-09-15
+
+### Added
+
+* Update FlywayFactory to support an argument to customize the schema programatically [`#2055`](https://github.com/MarquezProject/marquez/pull/2055) [@collado-mike](https://github.com/collado-mike)   
+    *Note: this change does not aim to support custom schemas from configuration.*
+* Add steps on proposing changes to Marquez [`#2065`](https://github.com/MarquezProject/marquez/pull/2065) [@wslulciuc](https://github.com/wslulciuc)  
+    *Adds steps on how to submit a proposal for review along with a design doc template.*
+* Add `--metadata` option to seed backend with ol events [`#2082`](https://github.com/MarquezProject/marquez/pull/2082) [@wslulciuc](https://github.com/wslulciuc)  
+    *Updates the `seed` command to load metadata from a file containing an array of OpenLineage events via the `--metadata` option. (Metadata used in the command was not being defined using the OpenLineage standard.)*
+* Improve documentation on `nodeId` in the spec [`#2084`](https://github.com/MarquezProject/marquez/pull/2084) [@howardyoo](https://github.com/howardyoo)  
+    *Adds complete examples of `nodeId` to the spec.*
+* Add `metadata` cmd [`#2091`](https://github.com/MarquezProject/marquez/pull/2091) [@wslulciuc](https://github.com/wslulciuc)  
+    *Adds cmd `metadata` to generate OpenLineage events; generated events will be saved to a file called `metadata.json` that can be used to seed Marquez via the `seed` cmd. (We lacked a way to performance test the data model of Marquez with significantly large OL events.)*
+* Add possibility to soft-delete datasets and jobs [`#2032`](https://github.com/MarquezProject/marquez/pull/2032) [`#2099`](https://github.com/MarquezProject/marquez/pull/2099) [`#2101`](https://github.com/MarquezProject/marquez/pull/2101) [@mobuchowski](https://github.com/mobuchowski)  
+    *Adds the ability to "hide" inactive datasets and jobs through the UI. (This PR does not include the UI part.) The feature works by adding an `is_hidden` flag to both datasets and jobs tables. Then, it changes `jobs_view` and adds `datasets_view`, which hides rows where the `is_hidden` flag is set to True. This makes writing proper queries easier since there is no need to do this filtering manually. The soft-delete is reversed if the job or dataset is updated again because the new version reverts the flag.*
+* Add raw OpenLineage events API [`#2070`](https://github.com/MarquezProject/marquez/pull/2070) [@mobuchowski](https://github.com/mobuchowski)  
+    *Adds an API that returns raw OpenLineage events sorted by time and optionally filtered by namespace. Filtering by namespace takes into account both job and dataset namespaces*
+* Create column lineage endpoint proposal [`#2077`](https://github.com/MarquezProject/marquez/pull/2077) [@julienledem](https://github.com/julienledem) [@pawel-big-lebowski](https://github.com/pawel-big-lebowski)  
+    *Adds a proposal to implement a column-level lineage endpoint in Marquez to leverage the column-level lineage facet in OpenLineage.*
+
+### Changed
+
+* Update lineage query to only look at jobs with inputs or outputs [`#2068`](https://github.com/MarquezProject/marquez/pull/2068) [@collado-mike](https://github.com/collado-mike)  
+    *Changes the lineage query to query the `job_versions_io_mapping` table and INNER join with the `jobs_view` so that only jobs that have inputs or outputs are present in the `jobs_io` CTE. Hence, the table becomes very small and the recursive join in the lineage CTE very fast. (In many environments, a large number of jobs reporting events have no inputs or outputs - e.g., PythonOperators in an Airflow deployment. If a Marquez installation has many of these, the lineage query spends much of its time searching for overlaps with jobs that have no inputs or outputs.)*
+* Persist OpenLineage event before updating Marquez model [`#2069`](https://github.com/MarquezProject/marquez/pull/2069) [@fm100](https://github.com/fm100)  
+    *Switches the order of the code in order to persist the OpenLineage event first and then update the Marquez model. (When the `RunTransitionListener` was invoked, the OpenLineage event was not persisted to the database. Because the OpenLineage event is the source of truth for all Marquez run transitions, it should be available from `RunTransitionListener`.)*   
+* Drop requirement to provide marquez.yml for `seed` cmd [`#2094`](https://github.com/MarquezProject/marquez/pull/2094) [@wslulciuc](https://github.com/wslulciuc)  
+    *Use `io.dropwizard.cli.Command` instead of `io.dropwizard.cli.ConfiguredCommand` to no longer require passing marquez.yml as an argument to the `seed` cmd. (The marquez.yml argument is not used in the `seed` cmd.)*
+
+### Fixed
+
+* Fix/rewrite jobs fqn locks [`#2067`](https://github.com/MarquezProject/marquez/pull/2067) [@collado-mike](https://github.com/collado-mike)   
+    *Updates the function to only update the table if the job is a new record or if the `symlink_target_uuid` is distinct from the previous value. (The `rewrite_jobs_fqn_table` function was inadvertently updating jobs even when no metadata about the job had changed. Under load, this caused significant locking issues, as the `jobs_fqn` table must be locked for every job update.)*
+* Fix `enum` string types in the OpenAPI spec [`#2086`](https://github.com/MarquezProject/marquez/pull/2086) [@studiosciences](https://github.com/studiosciences)  
+    *Changes the type to `string`. (`type: enum` was not valid in OpenAPI spec.)*
+* Fix incorrect PostgresSQL version [`#2089`](https://github.com/MarquezProject/marquez/pull/2089) [@jabbera](https://github.com/jabbera)  
+    *Corrects the tag for PostgresSQL.*
+* Update `OpenLineageDao` to handle Airflow run UUID conflicts [`#2097`](https://github.com/MarquezProject/marquez/pull/2097) [@collado-mike](https://github.com/collado-mike)  
+    *Alleviates the problem for Airflow installations that will continue to publish events with the older OpenLineage library. This checks the namespace of the parent run and verifies that it matches the namespace in the `ParentRunFacet`. If not, it generates a new parent run ID that will be written with the correct namespace. (The Airflow integration was generating conflicting UUIDs based on the DAG name and the DagRun ID without accounting for different namespaces. In Marquez installations that have multiple Airflow deployments with duplicated DAG names, we generated jobs whose parents have the wrong namespace.)* 
+
+## [0.25.0](https://github.com/MarquezProject/marquez/compare/0.24.0...0.25.0) - 2022-08-08
+
+### Fixed
+
+* Fix py module release [`#2057`](https://github.com/MarquezProject/marquez/pull/2057) [@wslulciuc](https://github.com/wslulciuc)
+* Use `/bin/sh` in `web/docker/entrypoint.sh` [`#2059`](https://github.com/MarquezProject/marquez/pull/2059) [@wslulciuc](https://github.com/wslulciuc)
+
+## [0.24.0](https://github.com/MarquezProject/marquez/compare/0.23.0...0.24.0) - 2022-08-02
+
+### Added
+
+* Add copyright lines to all source files [`#1996`](https://github.com/MarquezProject/marquez/pull/1996) [@merobi-hub](https://github.com/MarquezProject/marquez/commits?author=merobi-hub)
+* Add copyright and license guidelines in `CONTRIBUTING.md` [@wslulciuc](https://github.com/wslulciuc)
+* Add `@FlywayTarget` annotation to migration tests to control flyway upgrades [`#2035`](https://github.com/MarquezProject/marquez/pull/2035) [@collado-mike](https://github.com/collado-mike)
+
+### Changed
+
+* Updated `jobs_view` to stop computing FQN on reads and to compute on _writes_ instead [`#2036`](https://github.com/MarquezProject/marquez/pull/2036) [@collado-mike](https://github.com/collado-mike)
+* Runs row reduction [`#2041`](https://github.com/MarquezProject/marquez/pull/2041) [@collado-mike](https://github.com/collado-mike)
+
+### Fixed
+
+* Update `Run` in the openapi spec to include a `context` field [`#2020`](https://github.com/MarquezProject/marquez/pull/2020) [@esaych](https://github.com/Esaych)
+* Fix dataset openapi model [`#2038`](https://github.com/MarquezProject/marquez/pull/2038) [@esaych](https://github.com/Esaych)
+* Fix casing on `lastLifecycleState` [`#2039`](https://github.com/MarquezProject/marquez/pull/2039) [@esaych](https://github.com/Esaych)
+* Fix V45 migration to include initial population of jobs_fqn table [`#2051`](https://github.com/MarquezProject/marquez/pull/2051) [@collado-mike](https://github.com/collado-mike)
+* Fix symlinked jobs in queries [`#2053`](https://github.com/MarquezProject/marquez/pull/2053) [@collado-mike](https://github.com/collado-mike)
+
+## [0.23.0](https://github.com/MarquezProject/marquez/compare/0.22.0...0.23.0) - 2022-06-16
+
+### Added
+
+* Update docker-compose.yml: Randomly map postgres db port [`#2000`](https://github.com/MarquezProject/marquez/pull/2000) [@RNHTTR](https://github.com/RNHTTR)
+* Job parent hierarchy [`#1935`](https://github.com/MarquezProject/marquez/pull/1935) [`#1980`](https://github.com/MarquezProject/marquez/pull/1980) [`#1992`](https://github.com/MarquezProject/marquez/pull/1992) [@collado-mike](https://github.com/collado-mike)
+
+### Changed
+
+* Set default limit for listing datasets and jobs in UI from `2000` to `25` [`#2018`](https://github.com/MarquezProject/marquez/pull/2018) [@wslulciuc](https://github.com/wslulciuc)
+* Update OpenLineage write API to be non-transactional and avoid unnecessary locks on records under heavy contention [@collado-mike](https://github.com/collado-mike)
+
+### Fixed
+
+* Return the tag for postgresql to 12.1.0 [`#2015`](https://github.com/MarquezProject/marquez/pull/2015) [@rossturk](https://github.com/rossturk)
 
 ## [0.22.0](https://github.com/MarquezProject/marquez/compare/0.21.0...0.22.0) - 2022-05-16
 
 ### Added
 
-* Add support for `LifecycleStateChangeFacet` with an ability to softly delete datasets [#1847](https://github.com/MarquezProject/marquez/pull/1847)[@pawel-big-lebowski](https://github.com/pawel-big-lebowski)
-* Enable pod specific annotations in Marquez Helm Chart via `marquez.podAnnotations` [#1945](https://github.com/MarquezProject/marquez/pull/1945) [@wslulciuc](https://github.com/wslulciuc)
-* Add support for job renaming/redirection via symlink [#1947](https://github.com/MarquezProject/marquez/pull/1947) [@collado-mike](https://github.com/collado-mike)
-* Add `Created by` view for dataset versions along with SQL syntax highlighting in web UI [#1929](https://github.com/MarquezProject/marquez/pull/1929) [@phixMe](https://github.com/phixMe)
-* Add `operationId` to openapi spec [#1978](https://github.com/MarquezProject/marquez/pull/1978) [@phixMe](https://github.com/phixMe)
+* Add support for `LifecycleStateChangeFacet` with an ability to softly delete datasets [`#1847`](https://github.com/MarquezProject/marquez/pull/1847)[@pawel-big-lebowski](https://github.com/pawel-big-lebowski)
+* Enable pod specific annotations in Marquez Helm Chart via `marquez.podAnnotations` [`#1945`](https://github.com/MarquezProject/marquez/pull/1945) [@wslulciuc](https://github.com/wslulciuc)
+* Add support for job renaming/redirection via symlink [`#1947`](https://github.com/MarquezProject/marquez/pull/1947) [@collado-mike](https://github.com/collado-mike)
+* Add `Created by` view for dataset versions along with SQL syntax highlighting in web UI [`#1929`](https://github.com/MarquezProject/marquez/pull/1929) [@phixMe](https://github.com/phixMe)
+* Add `operationId` to openapi spec [`#1978`](https://github.com/MarquezProject/marquez/pull/1978) [@phixMe](https://github.com/phixMe)
 
 ### Changed
 
-* Upgrade Flyway to v7.6.0 [#1974](https://github.com/MarquezProject/marquez/pull/1974) [@dakshin-k](https://github.com/dakshin-k)
+* Upgrade Flyway to v7.6.0 [`#1974`](https://github.com/MarquezProject/marquez/pull/1974) [@dakshin-k](https://github.com/dakshin-k)
 
 ### Fixed
 
-* Remove size limits on namespaces, dataset names, and and source connection urls [#1925](https://github.com/MarquezProject/marquez/pull/1925) [@collado-mike](https://github.com/collado-mike)
-* Update namespace names to allow `=`, `@`, and `;` [#1936](https://github.com/MarquezProject/marquez/pull/1936) [@mobuchowski](https://github.com/mobuchowski)
-* Time duration display in web UI [#1950](https://github.com/MarquezProject/marquez/pull/1950) [@phixMe](https://github.com/phixMe)
+* Remove size limits on namespaces, dataset names, and and source connection urls [`#1925`](https://github.com/MarquezProject/marquez/pull/1925) [@collado-mike](https://github.com/collado-mike)
+* Update namespace names to allow `=`, `@`, and `;` [`#1936`](https://github.com/MarquezProject/marquez/pull/1936) [@mobuchowski](https://github.com/mobuchowski)
+* Time duration display in web UI [`#1950`](https://github.com/MarquezProject/marquez/pull/1950) [@phixMe](https://github.com/phixMe)
 * Enable web UI to access API via Helm Chart [@GZack2000](https://github.com/GZack2000)
 
 ## [0.21.0](https://github.com/MarquezProject/marquez/compare/0.20.0...0.21.0) - 2022-03-03

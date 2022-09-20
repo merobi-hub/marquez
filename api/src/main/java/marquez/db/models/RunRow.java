@@ -1,9 +1,11 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db.models;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -12,7 +14,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
-import marquez.common.models.DatasetVersionId;
 
 @AllArgsConstructor
 @EqualsAndHashCode
@@ -21,12 +22,10 @@ public class RunRow {
   @Getter @NonNull private final UUID uuid;
   @Getter @NonNull private final Instant createdAt;
   @Getter @NonNull private final Instant updatedAt;
-  @Getter @NonNull private final UUID jobUuid;
+  @Getter private final UUID jobUuid;
   @Nullable private final UUID jobVersionUuid;
   @Nullable private final UUID parentRunUuid;
   @Getter @NonNull private final UUID runArgsUuid;
-  @Getter @NonNull private final List<DatasetVersionId> inputVersions;
-  @Getter @NonNull private final List<DatasetVersionId> outputVersions;
   @Nullable private final Instant nominalStartTime;
   @Nullable private final Instant nominalEndTime;
   @Nullable private final String currentRunState;
@@ -34,12 +33,6 @@ public class RunRow {
   @Nullable private final UUID startRunStateUuid;
   @Nullable private final Instant endedAt;
   @Nullable private final UUID endRunStateUuid;
-  @Getter private final String namespaceName;
-  @Getter private final String jobName;
-
-  public boolean hasInputVersionUuids() {
-    return !inputVersions.isEmpty();
-  }
 
   public Optional<UUID> getParentRunUuid() {
     return Optional.ofNullable(parentRunUuid);

@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db;
 
@@ -38,7 +41,6 @@ import marquez.common.models.NamespaceName;
 import marquez.common.models.RunState;
 import marquez.db.models.DatasetRow;
 import marquez.db.models.ExtendedJobVersionRow;
-import marquez.db.models.ExtendedRunRow;
 import marquez.db.models.JobContextRow;
 import marquez.db.models.JobRow;
 import marquez.db.models.JobVersionRow;
@@ -253,7 +255,7 @@ final class DbTestUtils {
   }
 
   /** Adds a new {@link RunRow} object to the {@code runs} table. */
-  static ExtendedRunRow newRun(
+  static RunRow newRun(
       final Jdbi jdbi,
       final UUID jobUuid,
       final UUID jobVersionUuid,

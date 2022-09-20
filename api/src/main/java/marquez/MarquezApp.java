@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez;
 
@@ -24,6 +27,7 @@ import javax.sql.DataSource;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import marquez.api.filter.JobRedirectFilter;
+import marquez.cli.MetadataCommand;
 import marquez.cli.SeedCommand;
 import marquez.common.Utils;
 import marquez.db.DbMigration;
@@ -35,6 +39,8 @@ import marquez.tracing.TracingServletFilter;
 import org.flywaydb.core.api.FlywayException;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.SqlLogger;
+import org.jdbi.v3.jackson2.Jackson2Config;
+import org.jdbi.v3.jackson2.Jackson2Plugin;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
@@ -72,6 +78,7 @@ public final class MarquezApp extends Application<MarquezConfig> {
             new EnvironmentVariableSubstitutor(ERROR_ON_UNDEFINED)));
 
     // Add CLI commands
+    bootstrap.addCommand(new MetadataCommand());
     bootstrap.addCommand(new SeedCommand());
 
     bootstrap.getObjectMapper().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -149,12 +156,14 @@ public final class MarquezApp extends Application<MarquezConfig> {
         factory
             .build(env, config.getDataSourceFactory(), source, DB_POSTGRES)
             .installPlugin(new SqlObjectPlugin())
-            .installPlugin(new PostgresPlugin());
+            .installPlugin(new PostgresPlugin())
+            .installPlugin(new Jackson2Plugin());
     SqlLogger sqlLogger = new InstrumentedSqlLogger(env.metrics());
     if (isSentryEnabled(config)) {
       sqlLogger = new TracingSQLLogger(sqlLogger);
     }
     jdbi.setSqlLogger(sqlLogger);
+    jdbi.getConfig(Jackson2Config.class).setMapper(Utils.getMapper());
 
     final MarquezContext context =
         MarquezContext.builder().jdbi(jdbi).tags(config.getTags()).build();

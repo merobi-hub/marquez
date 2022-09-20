@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.service;
 
@@ -59,7 +62,7 @@ public class DatasetService extends DelegatingDaos.DelegatingDatasetDao {
       @NonNull DatasetMeta datasetMeta) {
     if (datasetMeta.getRunId().isPresent()) {
       UUID runUuid = datasetMeta.getRunId().get().getValue();
-      ExtendedRunRow runRow = runDao.findRunByUuidAsRow(runUuid).get();
+      ExtendedRunRow runRow = runDao.findRunByUuidAsExtendedRow(runUuid).get();
 
       List<ExtendedDatasetVersionRow> outputs =
           datasetVersionDao.findOutputDatasetVersionsFor(runUuid);

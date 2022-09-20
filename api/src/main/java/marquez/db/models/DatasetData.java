@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db.models;
 
@@ -36,7 +39,7 @@ public class DatasetData implements NodeData {
   @NonNull ImmutableSet<TagName> tags;
   @Nullable Instant lastModifiedAt;
   @Nullable String description;
-  @Nullable String lastlifecycleState;
+  @Nullable String lastLifecycleState;
 
   public Optional<Instant> getLastModifiedAt() {
     return Optional.ofNullable(lastModifiedAt);
@@ -46,8 +49,8 @@ public class DatasetData implements NodeData {
     return Optional.ofNullable(description);
   }
 
-  public Optional<String> getLastlifecycleState() {
-    return Optional.ofNullable(lastlifecycleState);
+  public Optional<String> getLastLifecycleState() {
+    return Optional.ofNullable(lastLifecycleState);
   }
 
   @JsonIgnore

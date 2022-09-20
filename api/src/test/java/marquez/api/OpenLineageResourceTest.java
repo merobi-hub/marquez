@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.api;
 
@@ -13,7 +16,9 @@ import com.google.common.collect.ImmutableSortedSet;
 import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
 import java.util.Map;
+import javax.ws.rs.core.Response;
 import marquez.common.Utils;
+import marquez.db.OpenLineageDao;
 import marquez.service.LineageService;
 import marquez.service.ServiceFactory;
 import marquez.service.models.Lineage;
@@ -29,6 +34,7 @@ class OpenLineageResourceTest {
 
   static {
     LineageService lineageService = mock(LineageService.class);
+    OpenLineageDao openLineageDao = mock(OpenLineageDao.class);
 
     Node testNode =
         Utils.fromJson(
@@ -41,7 +47,9 @@ class OpenLineageResourceTest {
         ApiTestUtils.mockServiceFactory(Map.of(LineageService.class, lineageService));
 
     UNDER_TEST =
-        ResourceExtension.builder().addResource(new OpenLineageResource(serviceFactory)).build();
+        ResourceExtension.builder()
+            .addResource(new OpenLineageResource(serviceFactory, openLineageDao))
+            .build();
   }
 
   @Test
@@ -55,5 +63,17 @@ class OpenLineageResourceTest {
             .readEntity(Lineage.class);
 
     assertEquals(lineage, LINEAGE);
+  }
+
+  @Test
+  public void testGetLineageEventsBadSort() {
+    final Response response =
+        UNDER_TEST
+            .target("/api/v1/events/lineage")
+            .queryParam("sortDirection", "asdf")
+            .request()
+            .get();
+
+    assertEquals(response.getStatus(), 400);
   }
 }

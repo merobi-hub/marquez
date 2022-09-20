@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db;
 
@@ -94,11 +97,7 @@ class RunDaoTest {
         jdbi, runRow.getUuid(), RunState.COMPLETED, jobMeta.getOutputs());
 
     jobVersionDao.upsertJobVersionOnRunTransition(
-        jobRow.getNamespaceName(),
-        jobRow.getName(),
-        runRow.getUuid(),
-        RunState.COMPLETED,
-        Instant.now());
+        jobRow, runRow.getUuid(), RunState.COMPLETED, Instant.now());
 
     Optional<Run> run = runDao.findRunByUuid(runRow.getUuid());
     assertThat(run)
@@ -208,11 +207,7 @@ class RunDaoTest {
                   jdbi, runRow.getUuid(), RunState.COMPLETED, outputs);
 
               jobVersionDao.upsertJobVersionOnRunTransition(
-                  jobRow.getNamespaceName(),
-                  jobRow.getName(),
-                  runRow.getUuid(),
-                  RunState.COMPLETED,
-                  Instant.now());
+                  jobRow, runRow.getUuid(), RunState.COMPLETED, Instant.now());
               return runRow;
             });
   }
@@ -240,7 +235,7 @@ class RunDaoTest {
             null,
             namespaceRow.getUuid(),
             namespaceRow.getName(),
-            row.getJobName(),
+            jobRow.getName(),
             null,
             null);
 

@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.client;
 
@@ -22,6 +25,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
@@ -120,6 +124,26 @@ class MarquezHttp implements Closeable {
     log.debug("GET {}", url);
     try {
       final HttpGet request = new HttpGet();
+      request.setURI(url.toURI());
+      request.addHeader(ACCEPT, APPLICATION_JSON.toString());
+
+      addAuthToReqIfKeyPresent(request);
+
+      final HttpResponse response = http.execute(request);
+      throwOnHttpError(response);
+
+      final String bodyAsJson = EntityUtils.toString(response.getEntity(), UTF_8);
+      log.debug("Response: {}", bodyAsJson);
+      return bodyAsJson;
+    } catch (URISyntaxException | IOException e) {
+      throw new MarquezHttpException();
+    }
+  }
+
+  String delete(URL url) {
+    log.debug("DELETE {}", url);
+    try {
+      final HttpDelete request = new HttpDelete();
       request.setURI(url.toURI());
       request.addHeader(ACCEPT, APPLICATION_JSON.toString());
 

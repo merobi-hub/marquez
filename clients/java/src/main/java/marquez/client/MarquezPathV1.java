@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.client;
 
@@ -67,6 +70,10 @@ class MarquezPathV1 {
 
   static String namespacePath(String namespaceName) {
     return path("/namespaces/%s", namespaceName);
+  }
+
+  static String lineageEventPath() {
+    return path("/events/lineage");
   }
 
   static String sourcePath(String sourceName) {

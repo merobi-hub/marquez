@@ -1,3 +1,8 @@
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package marquez.db.migrations;
 
 import java.util.List;
@@ -37,12 +42,12 @@ import org.jdbi.v3.core.result.ResultProducers;
  * run, a job is created with the name field set to the DAG name.
  */
 @Slf4j
-public class V44_1__BackfillAirflowParentRuns implements JavaMigration {
+public class V44_2__BackfillAirflowParentRuns implements JavaMigration {
 
   /**
    * Return a numeric version that is greater than 44 (so it executes after that one) but before 45
    */
-  public static final MigrationVersion MIGRATION_VERSION = MigrationVersion.fromVersion("44.1");
+  public static final MigrationVersion MIGRATION_VERSION = MigrationVersion.fromVersion("44.2");
 
   private static final String FIND_AIRFLOW_PARENT_RUNS_SQL =
       """
@@ -59,7 +64,7 @@ public class V44_1__BackfillAirflowParentRuns implements JavaMigration {
           FROM lineage_events le
           WHERE le.run_uuid=r.uuid
           AND event->'run'->'facets'->'parent'->'run'->>'runId' IS NOT NULL
-          AND event->'run'->'facets'->'airflow_version' IS NOT NULL
+          AND event->'run'->'facets'->>'airflow_version' IS NOT NULL
           ) e ON e.run_uuid=r.uuid
       WHERE e.parent_run_id IS NOT NULL
 """;
@@ -71,8 +76,8 @@ public class V44_1__BackfillAirflowParentRuns implements JavaMigration {
       current_location
       FROM jobs
       WHERE namespace_name=:namespace AND name=:jobName
-      ON CONFLICT(name, namespace_uuid) WHERE parent_job_uuid IS NULL
-      DO UPDATE SET updated_at=now()
+      ON CONFLICT (name, namespace_uuid) WHERE parent_job_uuid IS NULL
+      DO UPDATE SET updated_at=EXCLUDED.updated_at
       RETURNING uuid
       """;
   public static final String INSERT_PARENT_RUN_QUERY =

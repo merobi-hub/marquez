@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db;
 
@@ -71,6 +74,8 @@ public final class FlywayFactory {
   @Getter @Setter
   private String repeatableSqlMigrationPrefix = DEFAULT_REPEATABLE_SQL_MIGRATION_PREFIX;
 
+  @Getter @Setter private String schema;
+
   public Flyway build(@NonNull DataSource source) {
     return Flyway.configure()
         .dataSource(source)
@@ -99,6 +104,7 @@ public final class FlywayFactory {
         .placeholderSuffix(placeholderSuffix)
         .sqlMigrationPrefix(sqlMigrationPrefix)
         .repeatableSqlMigrationPrefix(repeatableSqlMigrationPrefix)
+        .defaultSchema(schema)
         .load();
   }
 }

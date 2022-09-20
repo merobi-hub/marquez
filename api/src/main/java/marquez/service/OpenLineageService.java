@@ -1,3 +1,8 @@
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package marquez.service;
 
 import static marquez.logging.MdcPropagating.withMdc;
@@ -25,17 +30,21 @@ import marquez.common.models.JobName;
 import marquez.common.models.JobVersionId;
 import marquez.common.models.NamespaceName;
 import marquez.common.models.RunId;
+import marquez.common.models.RunState;
 import marquez.db.BaseDao;
 import marquez.db.DatasetDao;
 import marquez.db.DatasetVersionDao;
 import marquez.db.models.ExtendedDatasetVersionRow;
+import marquez.db.models.JobRow;
 import marquez.db.models.RunArgsRow;
 import marquez.db.models.RunRow;
+import marquez.db.models.RunStateRow;
 import marquez.db.models.UpdateLineageRow;
 import marquez.service.RunTransitionListener.JobInputUpdate;
 import marquez.service.RunTransitionListener.JobOutputUpdate;
 import marquez.service.RunTransitionListener.RunInput;
 import marquez.service.RunTransitionListener.RunOutput;
+import marquez.service.RunTransitionListener.RunTransition;
 import marquez.service.models.LineageEvent;
 import marquez.service.models.RunMeta;
 
@@ -59,19 +68,6 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
   }
 
   public CompletableFuture<Void> createAsync(LineageEvent event) {
-    CompletableFuture<Void> marquez =
-        CompletableFuture.supplyAsync(
-                withSentry(withMdc(() -> updateMarquezModel(event, mapper))), executor)
-            .thenAccept(
-                (update) -> {
-                  if (event.getEventType() != null) {
-                    if (event.getEventType().equalsIgnoreCase("COMPLETE")) {
-                      buildJobOutputUpdate(update).ifPresent(runService::notify);
-                    }
-                    buildJobInputUpdate(update).ifPresent(runService::notify);
-                  }
-                });
-
     UUID runUuid = runUuidFromEvent(event.getRun());
     CompletableFuture<Void> openLineage =
         CompletableFuture.runAsync(
@@ -87,6 +83,20 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
                             createJsonArray(event, mapper),
                             event.getProducer()))),
             executor);
+
+    CompletableFuture<Void> marquez =
+        CompletableFuture.supplyAsync(
+                withSentry(withMdc(() -> updateMarquezModel(event, mapper))), executor)
+            .thenAccept(
+                (update) -> {
+                  if (event.getEventType() != null) {
+                    if (event.getEventType().equalsIgnoreCase("COMPLETE")) {
+                      buildJobOutputUpdate(update).ifPresent(runService::notify);
+                    }
+                    buildJobInputUpdate(update).ifPresent(runService::notify);
+                    buildRunTransition(update).ifPresent(runService::notify);
+                  }
+                });
 
     return CompletableFuture.allOf(marquez, openLineage);
   }
@@ -116,7 +126,12 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
   private Optional<JobInputUpdate> buildJobInputUpdate(UpdateLineageRow record) {
     RunId runId = RunId.of(record.getRun().getUuid());
     return buildJobInput(
-        record.getRun(), record.getRunArgs(), buildJobVersionId(record), runId, record);
+        record.getRun(),
+        record.getRunArgs(),
+        record.getJob(),
+        buildJobVersionId(record),
+        runId,
+        record);
   }
 
   public JobVersionId buildJobVersionId(UpdateLineageRow record) {
@@ -156,14 +171,15 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
         new JobOutputUpdate(
             runId,
             jobVersionId,
-            JobName.of(record.getRun().getJobName()),
-            NamespaceName.of(record.getRun().getNamespaceName()),
+            JobName.of(record.getJob().getName()),
+            NamespaceName.of(record.getJob().getNamespaceName()),
             runOutputs));
   }
 
   Optional<JobInputUpdate> buildJobInput(
       RunRow run,
       RunArgsRow runArgsRow,
+      JobRow jobRow,
       JobVersionId jobVersionId,
       RunId runId,
       UpdateLineageRow record) {
@@ -198,8 +214,8 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
                 .args(runArgs)
                 .build(),
             jobVersionId,
-            JobName.of(run.getJobName()),
-            NamespaceName.of(run.getNamespaceName()),
+            JobName.of(jobRow.getName()),
+            NamespaceName.of(jobRow.getNamespaceName()),
             runInputs));
   }
 
@@ -209,5 +225,16 @@ public class OpenLineageService extends DelegatingDaos.DelegatingOpenLineageDao 
         .namespace(NamespaceName.of(ds.getNamespaceName()))
         .name(DatasetName.of(ds.getDatasetName()))
         .build();
+  }
+
+  private Optional<RunTransition> buildRunTransition(UpdateLineageRow record) {
+    RunId runId = RunId.of(record.getRun().getUuid());
+    RunStateRow runStateRow = record.getRunState();
+    if (runStateRow == null) {
+      return Optional.empty();
+    }
+    RunState newState = RunState.valueOf(runStateRow.getState());
+    RunState oldState = newState.isStarting() ? null : RunState.RUNNING;
+    return Optional.of(new RunTransition(runId, oldState, newState));
   }
 }

@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2018-2022 contributors to the Marquez project
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 package marquez.db;
 
@@ -30,7 +33,7 @@ public interface DatasetFieldDao extends BaseDao {
   @SqlQuery(
       "SELECT EXISTS ("
           + "SELECT 1 FROM dataset_fields AS df "
-          + "INNER JOIN datasets AS d "
+          + "INNER JOIN datasets_view AS d "
           + "  ON d.uuid = df.dataset_uuid AND d.name = :datasetName AND d.namespace_name = :namespaceName "
           + "WHERE df.name = :name)")
   boolean exists(String namespaceName, String datasetName, String name);
